@@ -21,7 +21,7 @@ For running just the CLI, you need to install the libraries from
 pip3 install -r cli_requirements.txt
 ```
 
-Steps for playing planning poker:
+# Steps for playing planning poker:
 1. Start server (by Admin/Scrum Master/Product Owner)
 2. Add current issues (by Scrum Master/Product Owner)
 3. Each player starts the CLI (by each Team Member)
