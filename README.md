@@ -75,7 +75,7 @@ Each player can run `help` see which commands are available and documented.
 
 To see the voting system to be used in the game, a user can run
 ```commandline
-show_voting_system
+voting_system
 ```
 
 The first Team Member to be registered as a player (i.e. run
@@ -108,12 +108,12 @@ user_count
 
 For showing the current players, any Team Member can run
 ```commandline
-show_current_players
+current_players
 ```
 
 For showing the current status of voting, any Team Member can run
 ```commandline
-show_current_votes
+current_votes
 ```
 
 For showing the final report on the current issue (i.e. after all players
