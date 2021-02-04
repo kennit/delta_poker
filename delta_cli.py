@@ -1,3 +1,4 @@
+import argparse
 import json
 import requests
 
@@ -240,4 +241,17 @@ class MyPrompt(Cmd):
     do_EOF = do_exit
 
 
-MyPrompt().cmdloop()
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("-u", "--url", type=str,
+                        help="Set poker server url")
+
+    args = parser.parse_args()
+    if args.url:
+        url = ''.join(['http://', args.url, ':8000'])
+    else:
+        url = 'http://localhost:8000'
+
+    MyPrompt(url=url).cmdloop()
