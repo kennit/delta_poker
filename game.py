@@ -64,15 +64,24 @@ class Game:
         crt_votes = [x.name for x in crt_issue.votes]
         return [user.name for user in self.users if user.name not in crt_votes]
 
-    def set_previous_issue(self):
-        if self.current_issue_index > 0:
+    def set_previous_issue(self, user: User):
+        dealer_user = self.users[0]
+        if user.name == dealer_user.name and \
+                self.current_issue_index > 0:
             self.current_issue_index -= 1
         return self.current_issue_index
 
-    def set_next_issue(self):
-        if self.current_issue_index < len(self.issues_list):
+    def set_next_issue(self, user: User):
+        dealer_user = self.users[0]
+        if user.name == dealer_user.name and \
+                self.current_issue_index < len(self.issues_list) - 1:
             self.current_issue_index += 1
         return self.current_issue_index
 
     def get_current_issue(self):
+        crt_issue = self.issues_list[self.current_issue_index].dict()
+        del crt_issue['votes']
+        return crt_issue
+
+    def get_current_issue_results(self):
         return self.issues_list[self.current_issue_index]

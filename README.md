@@ -79,14 +79,15 @@ show_voting_system
 ```
 
 The first Team Member to be registered as a player (i.e. run
-`add_player username` first) will be "dealer" and can move between issues to be
+`add_player $username` first) will be "dealer" and can move between issues to be
 voted on.
 
 Each player should run
 ```commandline
-add_player my_player_name
+add_player $username
 ```
-such that they can be registered in the game.
+where `$username` is the selected name for the Team Member such that
+they can be registered in the game.
 
 For displaying the current issue, a player should run
 ```commandline
@@ -95,9 +96,9 @@ current_issue
 
 For voting on the current issue, a player should run
 ```commandline
-vote_issue vote_value
+vote_issue $vote_value
 ```
-where `vote_value` should be a value in the list returned by
+where `$vote_value` should be a value in the list returned by
 `show_voting_system`
 
 For showing the number of players in the game, any Team Member can run

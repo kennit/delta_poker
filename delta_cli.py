@@ -22,7 +22,7 @@ class MyPrompt(Cmd):
         response = requests.request(method=method, url=full_uri, json=data)
         return response
 
-    def do_show_voting_system(self, inp):
+    def do_voting_system(self, inp):
         """
         Show voting system for the current game
         """
@@ -39,8 +39,9 @@ class MyPrompt(Cmd):
 
     # check username validity locally
     def do_add_player(self, username):
-        # TODO add docstring
-        # TODO add checks for input
+        """
+        Add a player to the current game
+        """
         if self.username:
             print(f"You are already registered in the game as {self.username}")
         elif len(username) < 4:
@@ -63,7 +64,7 @@ class MyPrompt(Cmd):
 
     def do_current_issue(self, inp):
         """
-        Show players that are registered for the current game
+        Show issue that players are voting on now
         """
         response = self.send_request(method='get',
                                      route='/issue/current')
@@ -79,8 +80,9 @@ class MyPrompt(Cmd):
 
     # check vote validity on the server
     def do_vote_issue(self, vote_value):
-        # TODO add docstring
-        # TODO add checks for input
+        """
+        Vote on the current issue with the registered user here
+        """
         crt_dict = {
             'name': self.username,
             'vote_value': vote_value
@@ -115,7 +117,7 @@ class MyPrompt(Cmd):
         else:
             print(f"{response.text}")
 
-    def do_show_current_players(self, inp):
+    def do_current_players(self, inp):
         """
         Show players that are registered for the current game
         """
@@ -123,7 +125,7 @@ class MyPrompt(Cmd):
                                      route='/user/show_all')
         if response.status_code == status.HTTP_200_OK:
             response_dict = json.loads(response.text)
-            print(f"Registered users for current game: "
+            print(f"Registered players for current game: "
                   f"{response_dict['current_users']}")
         elif response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY:
             message = json.loads(response.text)['detail'][0]['msg']
@@ -131,7 +133,7 @@ class MyPrompt(Cmd):
         else:
             print(f"{response.text}")
 
-    def do_show_current_votes(self, inp):
+    def do_current_votes(self, inp):
         """
         Show who voted and who still has to vote
         """
@@ -160,10 +162,58 @@ class MyPrompt(Cmd):
         Show vote report for current issue
         """
         response = self.send_request(method='get',
-                                     route='/show_report')
+                                     route='/issue/show_results')
         if response.status_code == status.HTTP_200_OK:
             response_dict = json.loads(response.text)
             print(f"{json.dumps(response_dict['report'], indent=4)}")
+        elif response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY:
+            message = json.loads(response.text)['detail'][0]['msg']
+            print(f"{message}")
+        else:
+            print(f"{response.text}")
+
+    def do_next_issue(self, inp):
+        """
+        Jump to next issue, if there is one (i.e. the current issue
+        is the last one and we can go back to programming)
+        """
+
+        crt_dict = {
+            'name': self.username
+        }
+
+        response = self.send_request(method='post',
+                                     route='/issue/next',
+                                     data=crt_dict)
+        if response.status_code == status.HTTP_200_OK:
+            response_dict = json.loads(response.text)
+            print(f"{json.dumps(response_dict, indent=4)}")
+        elif response.status_code == status.HTTP_400_BAD_REQUEST:
+            print(f"{json.loads(response.text)['detail']}")
+        elif response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY:
+            message = json.loads(response.text)['detail'][0]['msg']
+            print(f"{message}")
+        else:
+            print(f"{response.text}")
+
+    def do_prev_issue(self, inp):
+        """
+        Jump to previous issue, if there is one (i.e. we are on
+        the first issue)
+        """
+
+        crt_dict = {
+            'name': self.username
+        }
+
+        response = self.send_request(method='post',
+                                     route='/issue/previous',
+                                     data=crt_dict)
+        if response.status_code == status.HTTP_200_OK:
+            response_dict = json.loads(response.text)
+            print(f"{json.dumps(response_dict, indent=4)}")
+        elif response.status_code == status.HTTP_400_BAD_REQUEST:
+            print(f"{json.loads(response.text)['detail']}")
         elif response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY:
             message = json.loads(response.text)['detail'][0]['msg']
             print(f"{message}")

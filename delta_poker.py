@@ -81,38 +81,38 @@ def user_vote(user_vote: UserVote = Body(...)):
     game.vote_issue(user_vote=user_vote)
     crt_issue = game.get_current_issue()
     return {"message": f"{user_vote.name}'s '{user_vote.vote_value}' "
-                       f"was registered on {crt_issue.title}"}
+                       f"was registered on {crt_issue['title']}"}
 
 
 @app.get("/issue/vote_status")
 def get_issue_votes():
-    return {"long_status": f"On issue {game.get_current_issue().title} "
-                       f"Voted: {game.get_number_of_votes()} "
-                       f"Left to vote: {game.left_to_vote()} "
-                       f"out of {len(game.users)}",
+    return {"long_status": f"On issue {game.get_current_issue()['title']} "
+                           f"Voted: {game.get_number_of_votes()} "
+                           f"Left to vote: {game.left_to_vote()} "
+                           f"out of {len(game.users)}",
             "left_to_vote": game.left_to_vote(),
             "voted": game.get_number_of_votes()}
 
 
-@app.get("/show_report")
-def show_report() -> Dict:
+@app.get("/issue/show_results")
+def show_results() -> Dict:
     global game
     if len(game.left_to_vote()) == 0:
         return {"status": "done",
-                "report": game.get_current_issue()
+                "report": game.get_current_issue_results()
                 }
     else:
         return {"status": "pending",
                 "report": f"Left to vote: {game.left_to_vote()}"}
 
 
-# TODO only the dealer should be able to do this
-@app.get("/issue/previous")
-def go_to_previous_issue():
-    return game.set_previous_issue()
+@app.post("/issue/previous")
+def go_to_previous_issue(user: User = Body(...)) -> Dict:
+    _ = game.set_previous_issue(user)
+    return game.get_current_issue()
 
 
-# TODO only the dealer should be able to do this
-@app.get("/issue/next")
-def go_to_next_issue():
-    return game.set_next_issue()
+@app.post("/issue/next")
+def go_to_next_issue(user: User = Body(...)) -> Dict:
+    _ = game.set_next_issue(user)
+    return game.get_current_issue()
