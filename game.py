@@ -49,6 +49,8 @@ class Game:
         self.users = {}
         self.dealer = None
         self.current_issue_index = 0
+        if not os.path.exists(RESULTS_PATH):
+            os.mkdir(path=RESULTS_PATH)
 
     @property
     def get_dealer(self):
@@ -147,7 +149,7 @@ class Game:
         if self.get_dealer and user.name == self.get_dealer:
             crt_issue = self.get_current_initial_issue()
             self.issues_list[self.current_issue_index] = \
-                Issue(**crt_issue)
+                Issue(**crt_issue.dict())
             return True
         else:
             return False

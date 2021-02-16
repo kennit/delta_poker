@@ -5,7 +5,7 @@ for estimating workload. The app consists of:
 - a server for running the game
 - a CLI that can be used by Team Members to have a user-friendly interface
 
-# Requirements
+## Requirements
 1. This step is required for Admin/Scrum Master/Product Owner. For running both
    the server and the CLI, you need to install the libraries from
 `requirements.txt`:
@@ -21,12 +21,18 @@ For running just the CLI, you need to install the libraries from
 pip3 install -r cli_requirements.txt
 ```
 
-# Steps for playing planning poker:
+## Steps for playing planning poker:
 1. Start server (by Admin/Scrum Master/Product Owner)
 2. Add current issues (by Scrum Master/Product Owner)
-3. Each player starts the CLI (by each Team Member)
+3. Each player starts the CLI (all Team Members)
+   - Play planning poker by selecting issues and voting until reaching
+   consensus
+4. Each player exits the CLI (all Team Members)
 
-# Start server / Stop server
+A typical flow, including necessary commands, can be found in the 
+[Scenario](#scenario) section.
+
+### Start server / Stop server
 
 For starting the server such that it can be accessed from your network, you
 need to run:
@@ -41,7 +47,7 @@ message:
 
 To stop the server, you have to press ```CTRL+C```.
 
-# Add issues
+### Add issues
 
 To add the issues for the current game, you can run from the `examples`
 directory (if you are on the same machine as the server):
@@ -66,7 +72,7 @@ python3 add_issues.py -f issues_list.json -u ip_address:ip_port
 ```
 where `ip_address` is the IP address or the domain name of the server.
 
-# Play the game
+### Play the game
 Each Team Member can start the CLI by running
 ```commandline
 python3 delta_cli.py
@@ -140,9 +146,10 @@ or
 x
 ```
 
-# Scenario
+## Scenario
 
 A typical scenario would follow these steps:
+
 0. Add players (the first one will become dealer)
     - `add_player`
 1. Start game (by dealer)
