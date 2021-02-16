@@ -150,22 +150,24 @@ x
 
 A typical scenario would follow these steps:
 
-0. Add players (the first one will become dealer)
+0. Add 1 player which will become dealer
     - `add_player`
 1. Start game (by dealer)
     - `new_game`
 2. Add issues (by anyone)
     - (script_based)
-3. Voting
-    - 3.1. Select issue (by dealer)
+3. Add players, including the first one (by everyone)
+    - `add_player`
+4. Voting
+    - 4.1. Select issue (by dealer)
         - `next_issue`/`previous_issue`
-        - 3.2.1. Vote issue (by everyone)
+        - 4.2.1. Vote issue (by everyone)
             - `vote_issue`
-        - 3.2.2 Show report (by anyone)
+        - 4.2.2 Show report (by anyone)
             - `show_report`
-        - 3.2.3 Reset votes (by dealer)
+        - 4.2.3 Reset votes (by dealer)
             - `reset_votes`
-4. Exit game
+5. Exit game
     - `exit` (by everyone)
     - `q` (by everyone)
     - `x` (by everyone)

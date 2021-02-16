@@ -91,8 +91,10 @@ class Game:
                                             key=lambda x: x[1]['vote_count'])}
 
     def dump_results(self):
-        filename = os.path.join(RESULTS_PATH, str(time.time()))
-        with open(filename, 'w') as f:
+        crt_issue_title = self.get_current_issue.title
+        filename = '_'.join([crt_issue_title, str(time.time())])
+        filepath = os.path.join(RESULTS_PATH, filename)
+        with open(filepath, 'w') as f:
             json.dump(self.count_votes(), f)
 
     def exit_game(self, user: User) -> str:
