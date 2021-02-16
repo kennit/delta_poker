@@ -26,7 +26,7 @@ pip3 install -r cli_requirements.txt
 2. Add current issues (by Scrum Master/Product Owner)
 3. Each player starts the CLI (by each Team Member)
 
-# Start server
+# Start server / Stop server
 
 For starting the server such that it can be accessed from your network, you
 need to run:
@@ -39,9 +39,11 @@ IP address or the domain name of the server and you should see the following
 message:
 ```"Welcome to a friendly game of Planning Poker"```
 
-# Add current issues
+To stop the server, you have to press ```CTRL+C```.
 
-For adding the issues for the current game, you can run from the `examples`
+# Add issues
+
+To add the issues for the current game, you can run from the `examples`
 directory (if you are on the same machine as the server):
 ```commandline
 python3 add_issues.py -f issues_list.json
@@ -121,3 +123,52 @@ voted), any Team Member can run
 ```commandline
 show_report
 ```
+When issuing this command and it is successful, the result is also dumped on
+the server's disk, in the `results` directory.
+
+For after reaching a consensus on all issues, every player must run one of the 
+following commands to exit the game
+```commandline
+exit
+```
+or
+```commandline
+q
+```
+or
+```commandline
+x
+```
+
+# Scenario
+
+A typical scenario would follow these steps:
+0. Add players (the first one will become dealer)
+    - `add_player`
+1. Start game (by dealer)
+    - `new_game`
+2. Add issues (by anyone)
+    - (script_based)
+3. Voting
+    - 3.1. Select issue (by dealer)
+        - `next_issue`/`previous_issue`
+        - 3.2.1. Vote issue (by everyone)
+            - `vote_issue`
+        - 3.2.2 Show report (by anyone)
+            - `show_report`
+        - 3.2.3 Reset votes (by dealer)
+            - `reset_votes`
+4. Exit game
+    - `exit` (by everyone)
+    - `q` (by everyone)
+    - `x` (by everyone)
+   
+Extra commands that can be run, but are not part of the necessary
+flow:
+- `remove_player` (by dealer)
+- `current_dealer` (by anyone)
+- `current_issue` (by anyone)
+- `current_players` (by anyone)
+- `current_votes` (by anyone)
+- `user_count` (by anyone)
+- `voting_system` (by anyone)

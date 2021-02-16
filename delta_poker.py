@@ -1,6 +1,7 @@
 from fastapi import Body
 from fastapi import FastAPI
 from fastapi import HTTPException
+from fastapi import Query
 from fastapi import status
 from game import User
 from game import UserVote
@@ -13,63 +14,114 @@ app = FastAPI()
 game = Game(VotingSystem['fibonacci'].value)
 
 
-# # TODO only the admin can set the voting system
-# @app.put("/voting_system")
-# def set_voting_system(voting_system: str) -> Dict:
-#     game.set_voting_system(voting_system)
-#     return {"message": f"Voting system '{game.voting_system}' is selected"}
-
 @app.get("/")
 def greet_users():
     return "Welcome to a friendly game of Planning Poker"
 
 
-@app.get("/voting_system")
+@app.get("/game/get_dealer")
+def dealer_user() -> Dict:
+    return {"result_message": {"current_dealer": game.get_dealer}}
+
+
+@app.post("/game/new")
+def start_new_game(user: User = Body(...)) -> Dict:
+    new_game_started = game.new_game(user)
+    if new_game_started:
+        return {"result_message": f"Started new game using voting system "
+                                  f"'{game.voting_system}' is selected"}
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Only the dealer can start a new game. If "
+                   f"there is no dealer, please add one.")
+
+
+@app.get("/game/voting_system")
 def get_voting_system() -> Dict:
-    global game
-    return {"message": f"Voting system '{game.voting_system}' is selected"}
+    return {"result_message": f"Voting system '{game.voting_system}' is selected"}
 
 
 @app.put("/issue/add")
 def add_issue(title: str = Body(...),
               description: Optional[str] = Body(None)) -> Dict:
-    global game
     game.add_issue(title=title, description=description)
-    return {"message": f"Issue '{title}' was added"}
+    return {"result_message": f"Issue '{title}' was added"}
 
 
 @app.get("/issue/current")
 def current_issue():
-    global game
-    return game.get_current_issue()
+    try:
+        crt_issue = game.get_current_issue
+        return {"result_message": crt_issue}
+    except IndexError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Please add issues to the game")
 
 
-@app.put("/user/add")
-def add_user(user: User = Body(...)) -> Dict:
-    global game
-    game.add_user(user.name)
-    return {"message": f"User '{user.name}' was added"}
+@app.post("/issue/next")
+def go_to_next_issue(user: User = Body(...)) -> Dict:
+    _ = game.set_next_issue(user)
+    return {"result_message": game.get_current_issue}
 
 
-@app.get("/user/count")
-def add_user() -> Dict:
-    global game
-    return {"user_count": len(game.users)}
+@app.post("/issue/previous")
+def go_to_previous_issue(user: User = Body(...)) -> Dict:
+    _ = game.set_previous_issue(user)
+    return {"result_message": game.get_current_issue}
 
 
-@app.get("/user/show_all")
-def show_all_users() -> Dict:
-    global game
-    return {"current_users": game.show_users()}
+@app.get("/issue/show_results")
+def show_results() -> Dict:
+    if len(game.left_to_vote()) == 0:
+        game.dump_results()
+        try:
+            vote_distribution = game.count_votes()
+            return {"result_message":
+                        {"status": "done",
+                         "report": vote_distribution}
+                    }
+        except IndexError as e:
+            raise HTTPException(
+                status_code=status.HTTP_412_PRECONDITION_FAILED,
+                detail=f"Please add issues to the game"
+            )
+    else:
+        return {"result_message":
+                    {"status": "pending",
+                     "report": f"Left to vote: {game.left_to_vote()}"}
+                }
+
+
+@app.get("/issue/vote_status")
+def get_issue_votes():
+    try:
+        left_to_vote_count = game.left_to_vote()
+    except IndexError as e:
+        raise HTTPException(
+            status_code=status.HTTP_412_PRECONDITION_FAILED,
+            detail=f"Please add issues to the game"
+        )
+    if len(left_to_vote_count) == 0:
+        if len(game.users) == 0:
+            return {"result_message": f"Players need to be registered in order "
+                                      f"to vote"}
+        return {"result_message": f"Every registered player has voted. "
+                                  f"You can type show_report to see votes"}
+    if len(left_to_vote_count) > 1:
+        verb = "have"
+    elif len(left_to_vote_count) == 1:
+        verb = "has"
+    return {"result_message": f"{left_to_vote_count} still {verb} to vote"}
 
 
 @app.put("/issue/vote")
-def user_vote(user_vote: UserVote = Body(...)):
-    global game
-    crt_users = [user.name for user in game.users]
+def add_user_vote(user_vote: UserVote = Body(...)):
+    crt_users = [user.name for user in game.users.values()]
     if user_vote.name not in crt_users:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_412_PRECONDITION_FAILED,
             detail=f"Please add the user '{user_vote.name}' to the game")
 
     if user_vote.vote_value not in game.voting_system:
@@ -79,40 +131,49 @@ def user_vote(user_vote: UserVote = Body(...)):
                    f"{game.voting_system}")
 
     game.vote_issue(user_vote=user_vote)
-    crt_issue = game.get_current_issue()
-    return {"message": f"{user_vote.name}'s '{user_vote.vote_value}' "
-                       f"was registered on {crt_issue['title']}"}
+    crt_issue = game.get_current_issue
+    return {"result_message": f"{user_vote.name}'s '{user_vote.vote_value}' "
+                              f"was registered on {crt_issue.dict()['title']}"}
 
 
-@app.get("/issue/vote_status")
-def get_issue_votes():
-    return {"long_status": f"On issue {game.get_current_issue()['title']} "
-                           f"Voted: {game.get_number_of_votes()} "
-                           f"Left to vote: {game.left_to_vote()} "
-                           f"out of {len(game.users)}",
-            "left_to_vote": game.left_to_vote(),
-            "voted": game.get_number_of_votes()}
-
-
-@app.get("/issue/show_results")
-def show_results() -> Dict:
-    global game
-    if len(game.left_to_vote()) == 0:
-        return {"status": "done",
-                "report": game.get_current_issue_results()
-                }
+@app.post("/issue/votes_reset")
+def reset_votes(user: User = Body(...)):
+    votes_reset = game.reset_votes(user)
+    if votes_reset:
+        return {"result_message": f"Reset votes on issue "
+                                  f"{game.get_current_issue}"}
     else:
-        return {"status": "pending",
-                "report": f"Left to vote: {game.left_to_vote()}"}
+        raise HTTPException(
+            status_code=status.HTTP_412_PRECONDITION_FAILED,
+            detail=f"Only the dealer can reset votes. "
+                   f"If there is no dealer, please add one.")
 
 
-@app.post("/issue/previous")
-def go_to_previous_issue(user: User = Body(...)) -> Dict:
-    _ = game.set_previous_issue(user)
-    return game.get_current_issue()
+@app.post("/user/add")
+def add_user(user: User = Body(...)) -> Dict:
+    game.add_user(user.name)
+    return {"result_message": f"User '{user.name}' was added"}
 
 
-@app.post("/issue/next")
-def go_to_next_issue(user: User = Body(...)) -> Dict:
-    _ = game.set_next_issue(user)
-    return game.get_current_issue()
+@app.get("/user/count")
+def count_users() -> Dict:
+    return {"result_message": {"user_count": len(game.users)}}
+
+
+@app.post("/user/exit")
+def user_exit(user: User = Body(...)) -> Dict:
+    user_exit_status = game.exit_game(user)
+    return {"result_message": {"user_exit_status": user_exit_status}}
+
+
+@app.post("/user/remove")
+def remove_user(user: User = Body(...), username: str = Query(...)) -> Dict:
+    result_dict = game.remove_player(user, username)
+    return result_dict
+
+
+@app.get("/user/show_all")
+def show_all_users() -> Dict:
+    return {"result_message": {
+        "current_users": [x.name for x in game.show_users().values()]
+    }}
