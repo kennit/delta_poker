@@ -132,8 +132,8 @@ show_report
 When issuing this command and it is successful, the result is also dumped on
 the server's disk, in the `results` directory.
 
-For after reaching a consensus on all issues, every player must run one of the 
-following commands to exit the game
+After reaching a consensus on all issues, every player must run one of the 
+following commands to exit the game and the CLI
 ```commandline
 exit
 ```
