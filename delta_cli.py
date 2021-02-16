@@ -288,7 +288,7 @@ class MyPrompt(Cmd):
         if response.status_code == status.HTTP_200_OK:
             response_dict = json.loads(response.text)
             user_count = response_dict['result_message']['user_count']
-            if len(user_count) == 1:
+            if user_count == 1:
                 verb = 'is'
             else:
                 verb = 'has'
