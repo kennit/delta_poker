@@ -18,7 +18,7 @@ if __name__ == '__main__':
     if args.filename:
         issues_filename = args.filename
     else:
-        print(f"Please add filename")
+        print("Please add filename")
         sys.exit(0)
     if args.url:
         url = args.url
@@ -36,7 +36,7 @@ if __name__ == '__main__':
                                     json=crt_issue)
         except requests.exceptions.ConnectionError as ce:
             print(f"Server might not be running, or is not accesible from "
-                  f"this network")
+                  f"this network: {ce}")
             sys.exit(0)
         if response.status_code == status.HTTP_200_OK:
             if args.verbose:

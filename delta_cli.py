@@ -1,22 +1,42 @@
 import argparse
 import json
 import requests
+import time
 
 from cmd import Cmd
 from fastapi import status
+from pathlib import Path
 
 
 class MyPrompt(Cmd):
     prompt = 'planning_poker> '
-    intro = "Welcome! Type ? to list commands"
+    intro = "Welcome to a nice game of Planning Poker!\nType ? to list commands"
 
-    def __init__(self, url=None):
+    default_config_params = {"max_retries": 5,
+                             "show_timeout": 1,
+                             "url": "http://localhost:8000"}
+    default_keys_set = set(default_config_params.keys())
+
+    def __init__(self, **config_params):
         super().__init__()
         self.username = None
-        if url:
-            self.url = url
+
+        keys_set = set(config_params.keys())
+        common_config_keys = self.default_keys_set.intersection(keys_set)
+        difference_config_keys = self.default_keys_set.difference(keys_set)
+
+        if len(difference_config_keys) == 0:
+            for config_key, config_value in config_params.items():
+                setattr(self, config_key, config_value)
         else:
-            self.url = 'http://localhost:8000'
+            if len(difference_config_keys) < len(self.default_keys_set):
+                print("Not all parameters found in configuration file.")
+                for config_key in common_config_keys:
+                    setattr(self, config_key, config_params[config_key])
+            print(f"Using default value for {difference_config_keys}")
+            for config_key in difference_config_keys:
+                setattr(self, config_key,
+                        self.default_config_params[config_key])
 
     def default(self, inp):
         """
@@ -37,7 +57,7 @@ class MyPrompt(Cmd):
             print(f"{json.loads(response.text)['detail']}")
         elif response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY:
             message = json.loads(response.text)['detail'][0]['msg']
-            print(f"{message}")
+            print(f"{message.capitalize()}")
         else:
             print(f"{response.text}")
 
@@ -52,8 +72,26 @@ class MyPrompt(Cmd):
     @staticmethod
     def parse_report(report):
         for vote_value, vote_details in report.items():
-            print(f"{vote_details['vote_count']} voted for {vote_value}.\n"
+            print(f"{vote_details['vote_count']} voted for {vote_value} "
+                  f"story points.\n"
                   f"{json.dumps(vote_details['voters'], indent=4)}\n")
+
+    def get_report(self, inp):
+        current_status = 'pending'
+        retry_count = 0
+        while current_status == 'pending' and retry_count < self.max_retries:
+            response = self.send_request(method='get',
+                                         route='/issue/show_results')
+            if response.status_code == status.HTTP_200_OK:
+                response_message = json.loads(response.text)['result_message']
+                current_status = response_message['status']
+                if current_status == 'done':
+                    self.parse_report(response_message['report'])
+            else:
+                current_status = 'error'
+                self.print_error_response(response)
+            retry_count += 1
+            time.sleep(self.show_timeout)
 
     def send_request(self, method, route, params=None, data=None):
         full_uri = ''.join([self.url, route])
@@ -79,8 +117,6 @@ class MyPrompt(Cmd):
         if self.username and self.username in current_players:
             print(f"You already have a username in the current game: "
                   f"{self.username}")
-        elif len(username) < 4:
-            print(f"Please use a more meaningful name")
         else:
             crt_dict = {
                 'name': username
@@ -130,7 +166,7 @@ class MyPrompt(Cmd):
             response_dict = json.loads(response.text)
             current_users = response_dict['result_message']['current_users']
             if len(current_users) == 0:
-                print(f"Please add players to the game")
+                print("Please add players to the game")
             else:
                 print(f"Currently playing Planning Poker: "
                       f"{json.dumps(current_users)}")
@@ -166,7 +202,7 @@ class MyPrompt(Cmd):
             print(f"{response_dict['result_message']['user_exit_status']}")
         else:
             self.print_error_response(response)
-        print(f"Buh-bye! And in case I don't see you again, "
+        print(f"Buh-bye, {self.username}! And in case I don't see you again, "
               f"good afternoon, good evening and good night!")
         return True
 
@@ -230,7 +266,7 @@ class MyPrompt(Cmd):
         """
 
         if len(username) < 4:
-            print(f"Please use a more meaningful name")
+            print("Please use a more meaningful name")
         else:
             params_dict = {
                 'username': username
@@ -268,16 +304,7 @@ class MyPrompt(Cmd):
         """
         Show vote report for current issue
         """
-        response = self.send_request(method='get',
-                                     route='/issue/show_results')
-        if response.status_code == status.HTTP_200_OK:
-            response_message = json.loads(response.text)['result_message']
-            if response_message['status'] == 'pending':
-                print(f"{response_message['report']}")
-            else:
-                self.parse_report(response_message['report'])
-        else:
-            self.print_error_response(response)
+        self.get_report(inp)
 
     def do_user_count(self, inp):
         """
@@ -291,7 +318,7 @@ class MyPrompt(Cmd):
             if user_count == 1:
                 verb = 'is'
             else:
-                verb = 'has'
+                verb = 'are'
             print(f"Currently, there {verb} {user_count} registered "
                   f"players")
         else:
@@ -331,15 +358,27 @@ class MyPrompt(Cmd):
 
 if __name__ == '__main__':
 
+    crt_config_params = {}
+    config_path = Path('./configs/cli_config.json')
+
     parser = argparse.ArgumentParser()
-
-    parser.add_argument("-u", "--url", type=str,
-                        help="Set poker server url")
-
+    parser.add_argument("-c", "--config", type=str,
+                        help="Configuration file name")
     args = parser.parse_args()
-    if args.url:
-        url_arg = ''.join(['http://', args.url, ':8000'])
-    else:
-        url_arg = 'http://localhost:8000'
+    if args.config:
+        config_path = Path(args.config)
 
-    MyPrompt(url=url_arg).cmdloop()
+    if config_path.exists():
+        with open(config_path) as f:
+            try:
+                crt_config_params = json.load(f)
+            except json.decoder.JSONDecodeError as je:
+                print(f"Please make sure config file contains a dict in json "
+                      f"format. An example can be found in "
+                      f"'./configs/cli_config.json'. {je} was raised.")
+    else:
+        print(f"Please make sure the path {config_path} is correct and that "
+              f"the file exists. Will use default configuration parameters "
+              f"this time.")
+
+    MyPrompt(**crt_config_params).cmdloop()

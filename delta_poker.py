@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import Body
 from fastapi import FastAPI
 from fastapi import HTTPException
@@ -9,6 +11,10 @@ from game import Game
 from game import VotingSystem
 from typing import Dict
 from typing import Optional
+
+logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s',
+                    datefmt='%m/%d/%Y %I:%M:%S %p')
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 game = Game(VotingSystem['fibonacci'].value)
@@ -33,13 +39,14 @@ def start_new_game(user: User = Body(...)) -> Dict:
     else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Only the dealer can start a new game. If "
-                   f"there is no dealer, please add one.")
+            detail=("Only the dealer can start a new game. If "
+                    "there is no dealer, please add one."))
 
 
 @app.get("/game/voting_system")
 def get_voting_system() -> Dict:
-    return {"result_message": f"Voting system '{game.voting_system}' is selected"}
+    return {
+        "result_message": f"Voting system '{game.voting_system}' is selected"}
 
 
 @app.put("/issue/add")
@@ -55,9 +62,10 @@ def current_issue():
         crt_issue = game.get_current_issue
         return {"result_message": crt_issue}
     except IndexError as e:
+        logger.error(f"Found {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Please add issues to the game")
+            detail="Please add issues to the game")
 
 
 @app.post("/issue/next")
@@ -75,22 +83,27 @@ def go_to_previous_issue(user: User = Body(...)) -> Dict:
 @app.get("/issue/show_results")
 def show_results() -> Dict:
     if len(game.left_to_vote()) == 0:
-        game.dump_results()
+        if game.report_queue.qsize() == 0:
+            game.report_queue.put("dump_request")
+            game.dump_issue_results()
         try:
             vote_distribution = game.count_votes()
-            return {"result_message":
-                        {"status": "done",
-                         "report": vote_distribution}
+            return {"result_message": {
+                        "status": "done",
+                        "report": vote_distribution
+                        }
                     }
         except IndexError as e:
+            logger.error(f"Found {e}")
             raise HTTPException(
                 status_code=status.HTTP_412_PRECONDITION_FAILED,
-                detail=f"Please add issues to the game"
+                detail="Please add issues to the game"
             )
     else:
-        return {"result_message":
-                    {"status": "pending",
-                     "report": f"Left to vote: {game.left_to_vote()}"}
+        return {"result_message": {
+                    "status": "pending",
+                    "report": f"Left to vote: {game.left_to_vote()}"
+                    }
                 }
 
 
@@ -99,16 +112,17 @@ def get_issue_votes():
     try:
         left_to_vote_count = game.left_to_vote()
     except IndexError as e:
+        logger.error(f"Found {e}")
         raise HTTPException(
             status_code=status.HTTP_412_PRECONDITION_FAILED,
-            detail=f"Please add issues to the game"
+            detail="Please add issues to the game"
         )
     if len(left_to_vote_count) == 0:
         if len(game.users) == 0:
-            return {"result_message": f"Players need to be registered in order "
-                                      f"to vote"}
-        return {"result_message": f"Every registered player has voted. "
-                                  f"You can type show_report to see votes"}
+            return {"result_message": ("Players need to be registered in ",
+                                       "order to vote")}
+        return {"result_message": ("Every registered player has voted. ",
+                                   "You can type show_report to see votes")}
     if len(left_to_vote_count) > 1:
         verb = "have"
     elif len(left_to_vote_count) == 1:
@@ -130,10 +144,16 @@ def add_user_vote(user_vote: UserVote = Body(...)):
             detail=f"Please select a vote from the current voting system: "
                    f"{game.voting_system}")
 
-    game.vote_issue(user_vote=user_vote)
+    vote_status = game.vote_issue(user_vote=user_vote)
     crt_issue = game.get_current_issue
-    return {"result_message": f"{user_vote.name}'s '{user_vote.vote_value}' "
-                              f"was registered on {crt_issue.dict()['title']}"}
+    if vote_status:
+        return {"result_message": f"{user_vote.name}'s "
+                                  f"'{user_vote.vote_value}' "
+                                  f"was registered on "
+                                  f"{crt_issue.dict()['title']}"}
+    else:
+        return {"result_message": f"{user_vote.name} already voted on "
+                                  f"{crt_issue.dict()['title']}"}
 
 
 @app.post("/issue/votes_reset")
@@ -145,8 +165,8 @@ def reset_votes(user: User = Body(...)):
     else:
         raise HTTPException(
             status_code=status.HTTP_412_PRECONDITION_FAILED,
-            detail=f"Only the dealer can reset votes. "
-                   f"If there is no dealer, please add one.")
+            detail=("Only the dealer can reset votes. ",
+                    "If there is no dealer, please add one."))
 
 
 @app.post("/user/add")

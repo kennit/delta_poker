@@ -77,9 +77,27 @@ Each Team Member can start the CLI by running
 ```commandline
 python3 delta_cli.py
 ```
+For a list of available command line arguments, a user can run
+```commandline
+python3 delta_cli.py -h
+```
+The configuration file must contain a dictionary in JSON format, with the
+following keys:
+- `max_retries` = integer; how many times `show_report` will query the server
+  for displaying the vote result on the current issue;
+- `show_timeout` = number (float/integer); interval between queries made by 
+  `show_report` command;
+- `url` = string; poker planning server URL to which the CLI will connect.
+
+Such a file can be found in `configs` directory. If a parameter is missing from 
+the file, the default value is used:
+- `max_retries`: 5;
+- `show_timeout`: 1;
+- `url`: "http://localhost:8000"
+
 All the next commands are assumed to be run in the CLI.
 
-Each player can run `help` see which commands are available and documented.
+Each player can run `help` to see which commands are available and documented.
 
 To see the voting system to be used in the game, a user can run
 ```commandline
@@ -129,10 +147,14 @@ voted), any Team Member can run
 ```commandline
 show_report
 ```
-When issuing this command and it is successful, the result is also dumped on
-the server's disk, in the `results` directory.
+The maximum time for displaying the report or finishing the command depends on 2 
+parameters (which can also be given in the configuration file):
+- `max_retries`
+- `show_timeout`
+When issuing this command and it is successful (i.e. result is displayed), the 
+result is also dumped on the server's disk, in the `results` directory.
 
-After reaching a consensus on all issues, every player must run one of the 
+After reaching consensus on all issues, every player must run one of the 
 following commands to exit the game and the CLI
 ```commandline
 exit
